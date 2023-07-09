@@ -1,0 +1,30 @@
+name: Publish
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  dockerhub:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - id: pkg_version
+      run: echo "data=$(echo ${{ github.event.release.tag_name }} | cut -d'-' -f1)" >> $GITHUB_OUTPUT
+
+    - name: Build the Docker image
+      run: |
+        cd ${{ steps.pkg_version.outputs.data }}/
+        docker build . -t dnscat2
+
+    - name: Tag image
+      run: |
+        docker tag dnscat2 dmachard/dnscat2:${{ github.event.release.tag_name }}
+        docker tag dnscat2 dmachard/dnscat2:latest
+
+    - name: Upload to DockerHub
+      run: |
+        docker login -u ${{ secrets.DOCKERHUB_LOGIN }} -p ${{ secrets.DOCKERHUB_PASSWORD }}
+        docker push dmachard/dnscat2:${{ github.event.release.tag_name }}
+        docker push dmachard/dnscat2:latest
